@@ -19,6 +19,7 @@ train:
 
 evaluate:
 	python scripts/07_evaluate.py
+	python scripts/08_run_agents.py
 
 dashboard:
 	streamlit run dashboard/app.py --server.headless true

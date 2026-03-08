@@ -42,6 +42,7 @@ def cmd_pipeline():
         "05_train_models.py",
         "06_score_decide.py",
         "07_evaluate.py",
+        "08_run_agents.py",
     ]
 
     for script in steps:

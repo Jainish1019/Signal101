@@ -11,7 +11,7 @@ from src.ingestion.price_fetcher import download_all_prices
 from src.models.classifier import EventClassifier
 from src.models.drift_detector import DriftDetector
 from src.models.walk_forward import merge_with_returns
-from src.nlp.embedder import embed_text
+from src.nlp.embedder import embed_batch
 
 
 def run():
@@ -58,12 +58,12 @@ def run():
     else:
         print("  [WARN] Only one label class present; skipping classifier training.")
 
-    # Model B: Drift detector
+    # Model B: Drift detector (batch embed instead of per-row)
     print("\nBuilding Model B (drift centroids)...")
     drift = DriftDetector()
-    for _, row in merged.iterrows():
-        emb = embed_text(row["clean_text"])
-        drift.update(row["ticker"], emb)
+    embeddings = embed_batch(merged["clean_text"].tolist(), batch_size=64)
+    for i, (_, row) in enumerate(merged.iterrows()):
+        drift.update(row["ticker"], embeddings[i])
     drift.save()
     print("  Drift centroids saved.")
 

@@ -6,13 +6,11 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 from config.settings import PROCESSED_DIR, MODELS_DIR
 from src.models.classifier import EventClassifier
 from src.models.drift_detector import DriftDetector
-from src.models.explainer import build_explanation
 from src.signal.scorer import compute_composite, decide, predict_direction
-from src.nlp.embedder import embed_text
+from src.nlp.embedder import embed_batch
 
 
 def run():
@@ -38,26 +36,24 @@ def run():
     if model_b_path.exists():
         drift.load()
 
-    # Score each chunk
     print(f"Scoring {len(df)} chunks...")
 
     # Model A: batch predict
     proba = clf.predict_proba(df["clean_text"].tolist())
     df["score_a"] = np.round(proba * 100, 2)
 
-    # Model B + C: per-row
+    # Model B: batch embed then compute drift per row
+    print("  Batch embedding for drift scoring...")
+    embeddings = embed_batch(df["clean_text"].tolist(), batch_size=64)
+
     score_b_list = []
-    score_c_list = []
-
-    for _, row in tqdm(df.iterrows(), total=len(df), desc="Drift + Entity"):
-        emb = embed_text(row["clean_text"])
-        sb = drift.drift_score(row["ticker"], emb)
-        sc = min(100.0, 20.0 * row.get("entity_richness", 0))
+    for i in range(len(df)):
+        sb = drift.drift_score(df.iloc[i]["ticker"], embeddings[i])
         score_b_list.append(sb)
-        score_c_list.append(sc)
-
     df["score_b"] = score_b_list
-    df["score_c"] = score_c_list
+
+    # Model C: entity richness (already computed in features)
+    df["score_c"] = df["entity_richness"].apply(lambda x: min(100.0, 20.0 * x))
 
     # Composite
     df["composite_score"] = df.apply(
