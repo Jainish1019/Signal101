@@ -13,7 +13,7 @@ st.set_page_config(page_title="Signal-X | SEC Intelligence", page_icon="⚡", la
 # Inject Custom CSS
 if STYLE_CSS.exists():
     with open(STYLE_CSS) as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_allow_html=True)
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # Sidebar Header
 st.sidebar.markdown('<h1 class="header-gradient" style="font-size: 1.5rem !important;">SIGNAL-X</h1>', unsafe_allow_html=True)

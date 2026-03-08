@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 from config.settings import PROCESSED_DIR
-from src.rag.retriever import FilingRetriever
+from src.rag.retriever import search_similar
 
 # Setup paths
 DASHBOARD_DIR = Path(__file__).parent.parent
@@ -18,13 +18,14 @@ st.sidebar.markdown("---")
 
 st.markdown('<h1 class="header-gradient" style="font-size: 2.5rem !important;">🔍 Similar Events explorer</h1>', unsafe_allow_html=True)
 
-@st.cache_resource
-def get_retriever():
-    r = FilingRetriever()
-    r.load()
-    return r
+@st.cache_data
+def load_signals():
+    path = PROCESSED_DIR / "signals.parquet"
+    if path.exists():
+        return pd.read_parquet(path)
+    return pd.DataFrame()
 
-retriever = get_retriever()
+signals_df = load_signals()
 
 st.markdown("""
 <div class="glass-card">
@@ -40,20 +41,24 @@ if st.button("Search Intelligence DB", key="search"):
     if not query:
         st.warning("Please enter a query.")
     else:
-        results = retriever.search(query, k=top_k)
+        with st.spinner("Searching vector index..."):
+            results = search_similar(query, n=top_k, signals_df=signals_df)
+        
+        if not results:
+            st.info("No similar events found in the index.")
         
         for i, res in enumerate(results):
             # Determine badge
-            is_alert = res.get("decision") == "ALERT"
-            badge_class = "badge-bearish" if is_alert else "badge-neutral"
+            decision = res.get("decision", "ARCHIVE")
+            badge_class = "badge-bearish" if decision == "ALERT" else "badge-neutral"
             
             st.markdown(f"""
 <div class="glass-card">
     <div style="display: flex; justify-content: space-between;">
         <span style="font-weight: 700;">{i+1}. {res['ticker']}</span>
-        <span class="{badge_class}">{res['decision']}</span>
+        <span class="{badge_class}">{decision}</span>
     </div>
-    <div style="color: #90a4ae; margin-bottom: 10px;">Similarity: {res['score']:.3f} | Score: {res['composite_score']:.1f}</div>
-    <p style="font-size: 0.9rem; color: #cfd8dc;">{res['text'][:400]}...</p>
+    <div style="color: #90a4ae; margin-bottom: 10px;">Similarity: {res['similarity']:.3f} | Score: {res.get('composite_score', 0):.1f} | Date: {res.get('filed_at', 'N/A')}</div>
+    <p style="font-size: 0.9rem; color: #cfd8dc;">{res.get('headline', 'No content summary available...')[:400]}</p>
 </div>
             """, unsafe_allow_html=True)
