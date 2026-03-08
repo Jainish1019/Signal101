@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+data/raw/filings/
+data/processed/
+data/prices/
+data/vectordb/
+data/models/
+data/evaluation/
+*.egg-info/
+dist/
+build/
