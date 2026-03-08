@@ -31,7 +31,7 @@ def _load_signals():
     return pd.DataFrame()
 
 
-def call_gemini(user_message: str, context: str) -> str:
+def query_gemini(user_message: str, context: str = "General market analysis") -> str:
     """Call Gemini API with context."""
     if not _gemini_available:
         return _deterministic_fallback(user_message, context)
@@ -60,7 +60,7 @@ def answer_query(query: str, ticker: str = None) -> dict:
     signals_df = _load_signals()
     context_articles = search_similar(query, n=5, signals_df=signals_df)
     context_block = build_context_block(context_articles)
-    answer = call_gemini(query, context_block)
+    answer = query_gemini(query, context_block)
 
     return {
         "answer": answer,
@@ -79,7 +79,7 @@ def explain_signal(article: dict) -> dict:
 
     if _gemini_available:
         prompt = build_explain_prompt(article, similar)
-        answer = call_gemini(prompt, "Context injected into prompt.")
+        answer = query_gemini(prompt, "Context injected into prompt.")
     else:
         answer = build_explanation(article)
 

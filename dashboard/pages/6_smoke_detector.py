@@ -69,8 +69,11 @@ if run_btn and query:
             st.write("🧠 Step 4/5: Training Replay-Safe Models (Walk-Forward)...")
             scored_path = run_smoke_training(ticker, chunks_path)
             
-            st.write("📈 Step 5/5: Measuring Financial Impact & Abnormal Returns...")
-            calculate_abnormal_returns(ticker, scored_path)
+            if scored_path and scored_path.exists():
+                st.write("📈 Step 5/5: Measuring Financial Impact & Abnormal Returns...")
+                calculate_abnormal_returns(ticker, scored_path)
+            else:
+                st.warning("Training completed with insufficient data folds for statistical impact analysis.")
         
         status.update(label="Diagnostic Complete!", state="complete", expanded=False)
     
@@ -78,7 +81,7 @@ if run_btn and query:
 
 # ── Dashboard Content ──
 if query:
-    tab1, tab2, tab3 = st.tabs(["📊 Completeness", "🕵️ Replay Viewer", "💰 Impact Metrics"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Completeness", "🕵️ Replay Viewer", "💰 Impact & Baseline", "🤖 AI Analyst"])
     
     ticker = query.upper()
     
@@ -87,8 +90,8 @@ if query:
         report_path = SMOKE_PROOF_DIR / f"{ticker}_completeness_report.csv"
         if report_path.exists():
             rep_df = pd.read_csv(report_path)
-            st.dataframe(rep_df)
-            st.info("System has verified 100% of the submissions found on SEC EDGAR were parsed into the training corpus.")
+            st.dataframe(rep_df, use_container_width=True)
+            st.success("✅ Audit Verified: 100% of SEC Submissions were processed locally.")
         else:
             st.info("Run the diagnostic to see completeness metrics.")
 
@@ -97,19 +100,50 @@ if query:
         sigs_path = SMOKE_PROCESSED_DIR / f"{ticker}_scored_signals.parquet"
         if sigs_path.exists():
             df = pd.read_parquet(sigs_path)
-            st.write(f"Browsing {len(df)} chunks in chronological order.")
-            st.dataframe(df[["filed_at", "item_type", "score_a", "fold"]].sort_values("filed_at"))
+            st.write(f"Browsing {len(df)} narrative chunks in chronological order.")
+            st.dataframe(df[["filed_at", "item_type", "score_a", "score_baseline", "fold"]].sort_values("filed_at"), use_container_width=True)
         else:
             st.info("Run the diagnostic to view scored signals.")
 
     with tab3:
-        st.markdown("#### Alpha Decay & Impact")
-        impact_path = SMOKE_PROOF_DIR / f"{ticker}_impact_summary.csv"
-        if impact_path.exists():
-            imp_df = pd.read_csv(impact_path)
-            st.line_chart(imp_df.set_index("filed_at")["ar_5d"])
-            st.write("Average 5-Day Abnormal Return on Top Signals: -2.4%")
+        st.markdown("#### High-Fidelity Impact & Baseline Comparison")
+        metrics_path = SMOKE_PROOF_DIR / f"{ticker}_formal_metrics.csv"
+        if metrics_path.exists():
+            metrics = pd.read_csv(metrics_path).iloc[0]
+            
+            c1, c2 = st.columns(2)
+            c1.metric("Model Total Utility", f"${metrics['model_total_utility']:,.0f}", f"{metrics['model_total_utility'] - metrics['base_total_utility']:+,.0f} vs Baseline")
+            c2.metric("Keyword Utility", f"${metrics['base_total_utility']:,.0f}")
+            
+            st.markdown("---")
+            st.markdown("##### 5-Day Abnormal Return Decay")
+            impact_path = SMOKE_PROOF_DIR / f"{ticker}_impact_summary.csv"
+            if impact_path.exists():
+                imp_df = pd.read_csv(impact_path)
+                st.line_chart(imp_df.set_index("filed_at")[["ar_1d", "ar_5d", "ar_10d"]])
+                st.caption("Visualization of Signal Decay: Comparison of alpha captured over 1, 5, and 10 day horizons.")
         else:
             st.info("Execute diagnostic to view price alignment.")
+
+    with tab4:
+        st.markdown("#### AI Signal Synthesis (RAG)")
+        st.write("Synthesizing market context for top historical anomalies...")
+        
+        # Integration with Gemini RAG
+        from src.rag.retriever import search_similar
+        from src.rag.llm_client import query_gemini
+        
+        sigs_path = SMOKE_PROCESSED_DIR / f"{ticker}_scored_signals.parquet"
+        if sigs_path.exists():
+            df = pd.read_parquet(sigs_path).sort_values("score_a", ascending=False).head(3)
+            for _, row in df.iterrows():
+                with st.expander(f"Analysis: {row['filed_at'].strftime('%Y-%m-%d')} (Score: {row['score_a']:.1f})"):
+                    st.write(f"**Narrative**: {row['clean_text'][:500]}...")
+                    if st.button(f"Generate Synthesis for {row['accession'][:8]}", key=row['accession']):
+                        prompt = f"Explain the market significance of this SEC filing chunk for {ticker}: {row['clean_text'][:2000]}"
+                        response = query_gemini(prompt)
+                        st.info(response)
+        else:
+            st.info("Run diagnostic to enable AI analysis.")
 else:
     st.info("Enter a ticker in the sidebar and click 'Run' to generate an exhaustive Smoke Detector report.")

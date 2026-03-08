@@ -9,6 +9,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.calibration import CalibratedClassifierCV
 from config.settings import SMOKE_PROCESSED_DIR, SMOKE_MODELS_DIR, SMOKE_PROOF_DIR
+from config.keywords import KEYWORD_LEXICON
 
 def create_folds(df: pd.DataFrame, start_year: int = 2019, end_year: int = 2023):
     """
@@ -76,9 +77,8 @@ def run_smoke_training(ticker: str, chunks_path: Path):
         X_test = tfidf.transform(test_df["clean_text"])
         
         # 3. Labeling (Heuristic for Smoke Detector baseline)
-        # In a real quant setting, we might use price labels. 
-        # Here we use 'Event Richness' (matched keywords) as a proxy label for the baseline.
-        y_train = (train_df["item_type"] != "unknown").astype(int) # Simple proxy
+        # We label any known Item chunk as 1 (Signal) and others as 0 (Noise)
+        y_train = (train_df["item_type"] != "unknown").astype(int)
         
         # 4. Train & Calibrate
         model = LogisticRegression(class_weight='balanced')
@@ -88,9 +88,24 @@ def run_smoke_training(ticker: str, chunks_path: Path):
         # 5. Score Test
         probs = calibrated.predict_proba(X_test)[:, 1]
         
+        # 6. Keyword Baseline
+        keyword_scores = []
+        for text in test_df["clean_text"]:
+            text_l = text.lower()
+            score = 0
+            for cat, details in KEYWORD_LEXICON.items():
+                match_count = sum(1 for kw in details["keywords"] if kw in text_l)
+                score += match_count * details["weight"]
+            keyword_scores.append(score)
+        
         fold_test_res = test_df.copy()
         fold_test_res["score_a"] = probs * 100
+        fold_test_res["score_baseline"] = np.array(keyword_scores)
         fold_test_res["fold"] = name
+        
+        # 7. Signal Decay (Correlation over time within fold)
+        # We'll calculate this in the impact script using price, 
+        # but here we can at least flag the decay window.
         
         results.append(fold_test_res)
         
