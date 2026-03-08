@@ -25,7 +25,7 @@ st.markdown("### Autonomous Financial Filing Anomaly Detection")
 
 st.markdown("""
 <div class="glass-card">
-    <p style="font-size: 1.1rem; color: #cfd8dc;">
+    <p style="font-size: 1.1rem; color: #ffffff;">
         Welcome to your advanced financial intelligence hub. Signal-X processes thousands of SEC EDGAR 8-K filings 
         in real-time to isolate actionable market signals from corporate noise. 
         Using a 100% free stack, we deliver hedge-fund grade insights without the premium price tag.
@@ -74,4 +74,4 @@ with col_b:
     st.metric("Model Precision", "0.875", "+12% vs Baseline")
     st.metric("Total Alpha Utility", "$4,400", "+$23,450 vs Random")
 
-st.markdown('<div style="text-align: center; margin-top: 40px; color: #5c6bc0;">SIGNAL-X v1.0 | Google Antigravity Validated</div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align: center; margin-top: 40px; color: #ffffff;">SIGNAL-X v1.0 | Google Antigravity Validated</div>', unsafe_allow_html=True)

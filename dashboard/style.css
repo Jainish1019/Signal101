@@ -3,7 +3,7 @@
 
 html, body, [class*="css"] {
     font-family: 'Outfit', sans-serif;
-    color: #f0f4f8;
+    color: #ffffff;
 }
 
 .stApp {
@@ -17,11 +17,11 @@ html, body, [class*="css"] {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-radius: 20px;
-    border: 1px solid rgba(0, 255, 136, 0.1);
+    border: 1px solid rgba(0, 255, 136, 0.2);
     padding: 24px;
     margin-bottom: 24px;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
 }
 
 .glass-card:hover {
@@ -39,7 +39,7 @@ section[data-testid="stSidebar"] {
 
 /* Cyber Header Gradient - Emerald to Cobalt */
 .header-gradient {
-    background: linear-gradient(135deg, #00ff88 0%, #00d2ff 50%, #0066ff 100%);
+    background: linear-gradient(135deg, #00ff88 0%, #ffffff 50%, #0066ff 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -72,8 +72,8 @@ section[data-testid="stSidebar"] {
 }
 
 .badge-neutral {
-    background: rgba(255, 255, 255, 0.1);
-    color: #f0f4f8;
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
     padding: 6px 16px;
     border-radius: 8px;
     font-weight: 700;
@@ -86,7 +86,7 @@ section[data-testid="stSidebar"] {
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 2px;
-    color: #8892b0;
+    color: #ffffff;
     margin-bottom: 8px;
 }
 
@@ -99,7 +99,7 @@ section[data-testid="stSidebar"] {
 
 /* Sidebar Text Color Fix */
 [data-testid="stSidebarNav"] span {
-    color: #ccd6f6 !important;
+    color: #ffffff !important;
 }
 
 /* Button Styling Override */
