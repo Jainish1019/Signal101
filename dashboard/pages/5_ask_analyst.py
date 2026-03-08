@@ -1,68 +1,60 @@
-import sys, os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-
+# dashboard/pages/5_ask_analyst.py
 import streamlit as st
-from src.rag.llm_client import answer_query
-from config.settings import GEMINI_API_KEY
+from pathlib import Path
+from src.rag.llm_client import answer_query, explain_signal
 
-st.set_page_config(page_title="Ask Analyst", layout="wide")
+# Setup paths
+DASHBOARD_DIR = Path(__file__).parent.parent
+STYLE_CSS = DASHBOARD_DIR / "style.css"
 
-st.title("🤖 Ask the Analyst")
-st.markdown("Natural language Q&A powered by FAISS retrieval + Google Gemini (with deterministic fallback).")
+if STYLE_CSS.exists():
+    with open(STYLE_CSS) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-if not GEMINI_API_KEY:
-    st.info("No Gemini API key configured. Using deterministic template responses. "
-            "Set GEMINI_API_KEY in .env for richer answers.")
+st.sidebar.markdown('<h1 class="header-gradient" style="font-size: 1.5rem !important;">SIGNAL-X</h1>', unsafe_allow_html=True)
+st.sidebar.markdown("---")
+
+st.markdown('<h1 class="header-gradient" style="font-size: 2.5rem !important;">🤖 Ask the Analyst</h1>', unsafe_allow_html=True)
+
+st.markdown("""
+<div class="glass-card">
+    <p>Natural Language Q&A powered by <b>Gemini Pro RAG</b>. 
+    Ask complex cross-filing questions to synthesize narrative signals.</p>
+</div>
+""", unsafe_allow_html=True)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Suggested queries
-with st.sidebar:
-    st.subheader("Try These")
-    examples = [
-        "What types of 8-K filings get the highest scores?",
-        "Show me the most novel filings from Tesla",
-        "What usually happens after executive departure filings?",
-        "Which sectors had the most ALERT filings?",
-    ]
-    for ex in examples:
-        if st.button(ex, use_container_width=True):
-            st.session_state.messages.append({"role": "user", "content": ex})
-            with st.spinner("Searching..."):
-                res = answer_query(ex)
-            st.session_state.messages.append({
-                "role": "assistant", "content": res["answer"],
-                "sources": res.get("sources", [])
-            })
-            st.rerun()
+# Display chat history
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-# Render history
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-        if msg.get("sources"):
-            with st.expander(f"📚 {len(msg['sources'])} sources"):
-                for s in msg["sources"]:
-                    st.markdown(f"- [{s.get('ticker')}] {s.get('filed_at')} "
-                                f"(sim: {s.get('similarity', 0):.3f})")
+# Quick Queries
+cols = st.columns(3)
+if cols[0].button("Compare CEO resignations"):
+    prompt = "Which companies had CEO resignations and what was the general sentiment compared to MSFT?"
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.rerun()
 
-# Chat input
-if prompt := st.chat_input("Ask about the filing data..."):
+if cols[1].button("Find M&A activity"):
+    prompt = "Show me any filings mentioning acquisitions or mergers in 2020."
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.rerun()
+
+if prompt := st.chat_input("Ask Signal-X Analyst..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("Retrieving context and generating answer..."):
-            res = answer_query(prompt)
-        st.markdown(res["answer"])
-        if res.get("sources"):
-            with st.expander(f"📚 {len(res['sources'])} sources"):
-                for s in res["sources"]:
-                    st.markdown(f"- [{s.get('ticker')}] {s.get('filed_at')}")
-
-        st.session_state.messages.append({
-            "role": "assistant", "content": res["answer"],
-            "sources": res.get("sources", [])
-        })
+        with st.spinner("Synthesizing market signals..."):
+            response, sources = answer_query(prompt)
+            st.markdown(response)
+            if sources:
+                with st.expander("System Sources"):
+                    for s in sources:
+                        st.write(f"- {s['ticker']} ({s['date']}): {s['text'][:200]}...")
+        
+    st.session_state.messages.append({"role": "assistant", "content": response})

@@ -1,68 +1,85 @@
-import sys, os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-
+# dashboard/pages/2_signal_timeline.py
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+from pathlib import Path
 from config.settings import PROCESSED_DIR, PRICES_DIR
 
-st.set_page_config(page_title="Signal Timeline", layout="wide")
+# Setup paths
+DASHBOARD_DIR = Path(__file__).parent.parent
+STYLE_CSS = DASHBOARD_DIR / "style.css"
+
+if STYLE_CSS.exists():
+    with open(STYLE_CSS) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+st.sidebar.markdown('<h1 class="header-gradient" style="font-size: 1.5rem !important;">SIGNAL-X</h1>', unsafe_allow_html=True)
+st.sidebar.markdown("---")
+
+st.markdown('<h1 class="header-gradient" style="font-size: 2.5rem !important;">📈 Signal Timeline</h1>', unsafe_allow_html=True)
 
 @st.cache_data
 def load_data():
-    sig_path = PROCESSED_DIR / "signals.parquet"
-    price_path = PRICES_DIR / "daily_prices.parquet"
-    sigs = pd.read_parquet(sig_path) if sig_path.exists() else pd.DataFrame()
-    prices = pd.read_parquet(price_path) if price_path.exists() else pd.DataFrame()
-    if not sigs.empty:
-        sigs["filed_at"] = pd.to_datetime(sigs["filed_at"])
-    if not prices.empty:
-        prices["date"] = pd.to_datetime(prices["date"])
+    sigs = pd.read_parquet(PROCESSED_DIR / "signals.parquet")
+    prices = pd.read_parquet(PRICES_DIR / "daily_prices.parquet")
     return sigs, prices
 
-st.title("📈 Signal vs Price Timeline")
+sigs_df, prices_df = load_data()
 
-sigs, prices = load_data()
+tickers = sorted(sigs_df["ticker"].unique())
+selected_ticker = st.sidebar.selectbox("Select Ticker", tickers)
 
-if sigs.empty:
-    st.warning("No data available.")
-    st.stop()
+t_sigs = sigs_df[sigs_df["ticker"] == selected_ticker].sort_values("filed_at")
+t_prices = prices_df[prices_df["ticker"] == selected_ticker].sort_values("date")
 
-ticker = st.selectbox("Select Ticker", sorted(sigs["ticker"].unique()))
-tk_sigs = sigs[sigs["ticker"] == ticker].sort_values("filed_at")
-tk_prices = prices[prices["ticker"] == ticker].sort_values("date") if not prices.empty else pd.DataFrame()
+st.markdown(f"""
+<div class="glass-card">
+    <h4>{selected_ticker} Performance vs NLP Signal</h4>
+    <p style="color: #90a4ae;">Overlaying autonomous anomaly scores on historical price action.</p>
+</div>
+""", unsafe_allow_html=True)
 
-fig = make_subplots(specs=[[{"secondary_y": True}]])
+# Create Plotly Chart
+fig = go.Figure()
 
-# Price line
-if not tk_prices.empty:
-    fig.add_trace(go.Scatter(
-        x=tk_prices["date"], y=tk_prices["close"],
-        name="Price", line=dict(color="rgba(150,150,150,0.5)", width=2),
-    ), secondary_y=True)
+# Price Line
+fig.add_trace(go.Scatter(
+    x=t_prices["date"], y=t_prices["close"],
+    mode='lines', name='Price',
+    line=dict(color='#64ffda', width=2),
+    yaxis='y2'
+))
 
-# Signal scatter
-colors = {"ALERT": "red", "ARCHIVE": "green"}
-for dec in ["ALERT", "ARCHIVE"]:
-    sub = tk_sigs[tk_sigs["decision"] == dec]
-    if not sub.empty:
-        fig.add_trace(go.Scatter(
-            x=sub["filed_at"], y=sub["composite_score"],
-            mode="markers", name=dec,
-            marker=dict(color=colors[dec], size=10 if dec == "ALERT" else 6),
-            text=sub["clean_text"].str[:100],
-            hovertemplate="<b>%{text}</b><br>Score: %{y:.1f}<extra></extra>",
-        ), secondary_y=False)
+# Signal Dots
+alerts = t_sigs[t_sigs["decision"] == "ALERT"]
+archives = t_sigs[t_sigs["decision"] == "ARCHIVE"]
 
-fig.update_layout(title=f"Signal Timeline: {ticker}", height=500,
-                  plot_bgcolor="rgba(0,0,0,0)", hovermode="closest")
-fig.update_yaxes(title_text="Composite Score", range=[0, 105], secondary_y=False)
-fig.update_yaxes(title_text="Price ($)", secondary_y=True)
+fig.add_trace(go.Scatter(
+    x=alerts["filed_at"], y=alerts["composite_score"],
+    mode='markers', name='ALERT',
+    marker=dict(size=12, color='#ff00cc', symbol='circle', line=dict(width=2, color='white')),
+    yaxis='y1'
+))
+
+fig.add_trace(go.Scatter(
+    x=archives["filed_at"], y=archives["composite_score"],
+    mode='markers', name='ARCHIVE',
+    marker=dict(size=8, color='#1a1a2e', symbol='circle', line=dict(width=1, color='#90a4ae')),
+    yaxis='y1'
+))
+
+fig.update_layout(
+    template="plotly_dark",
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(0,0,0,0)',
+    margin=dict(l=20, r=20, t=20, b=20),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    xaxis=dict(showgrid=False),
+    yaxis=dict(title="Composite Score", side="left", range=[0, 105], showgrid=True, gridcolor='rgba(255,255,255,0.05)'),
+    yaxis2=dict(title="Stock Price ($)", side="right", overlaying='y', showgrid=False)
+)
 
 st.plotly_chart(fig, use_container_width=True)
 
-with st.expander("View Raw Data"):
-    cols = ["filed_at", "decision", "composite_score", "direction", "score_a", "score_b", "score_c"]
-    display_cols = [c for c in cols if c in tk_sigs.columns]
-    st.dataframe(tk_sigs[display_cols], use_container_width=True)
+with st.expander("View Underlying Data"):
+    st.dataframe(t_sigs[["filed_at", "item_type", "composite_score", "decision", "vader_compound", "matched_keywords"]])

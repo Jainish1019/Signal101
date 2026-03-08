@@ -1,45 +1,59 @@
-import sys, os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-
+# dashboard/pages/4_similar_events.py
 import streamlit as st
 import pandas as pd
+from pathlib import Path
 from config.settings import PROCESSED_DIR
-from src.rag.retriever import search_similar
+from src.rag.retriever import FilingRetriever
 
-st.set_page_config(page_title="Similar Events", layout="wide")
+# Setup paths
+DASHBOARD_DIR = Path(__file__).parent.parent
+STYLE_CSS = DASHBOARD_DIR / "style.css"
 
-@st.cache_data
-def load_signals():
-    path = PROCESSED_DIR / "signals.parquet"
-    return pd.read_parquet(path) if path.exists() else pd.DataFrame()
+if STYLE_CSS.exists():
+    with open(STYLE_CSS) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-st.title("🔍 Similar Events Explorer")
-st.markdown("Enter a filing excerpt or event description to find semantically similar filings.")
+st.sidebar.markdown('<h1 class="header-gradient" style="font-size: 1.5rem !important;">SIGNAL-X</h1>', unsafe_allow_html=True)
+st.sidebar.markdown("---")
 
-signals_df = load_signals()
+st.markdown('<h1 class="header-gradient" style="font-size: 2.5rem !important;">🔍 Similar Events explorer</h1>', unsafe_allow_html=True)
 
-query = st.text_area("Paste a filing excerpt or describe an event:", height=120,
-                     placeholder="e.g., Company announces acquisition of subsidiary for $2.5 billion")
+@st.cache_resource
+def get_retriever():
+    r = FilingRetriever()
+    r.load()
+    return r
 
-n_results = st.slider("Number of results", 3, 20, 10)
+retriever = get_retriever()
 
-if st.button("Search", type="primary") and query:
-    with st.spinner("Embedding query and searching FAISS..."):
-        results = search_similar(query, n=n_results, signals_df=signals_df)
+st.markdown("""
+<div class="glass-card">
+    <p>Describe a corporate event or paste a filing snippet to find semantically similar historical filings 
+    across the Signal-X knowledge base.</p>
+</div>
+""", unsafe_allow_html=True)
 
-    if not results:
-        st.warning("No results found. Make sure the FAISS index has been built.")
+query = st.text_area("Event Description / Snippet", placeholder="e.g. CEO resignation due to health reasons...", height=100)
+top_k = st.slider("Results", 1, 20, 5)
+
+if st.button("Search Intelligence DB", key="search"):
+    if not query:
+        st.warning("Please enter a query.")
     else:
-        for i, r in enumerate(results, 1):
-            score = r.get("composite_score", r.get("signal_score", 0))
-            decision = r.get("decision", "ARCHIVE")
-            color = "#FF4B4B" if decision == "ALERT" else "#00CC96"
-
-            st.markdown(f"### {i}. [{r.get('ticker', '??')}] {r.get('filed_at', 'Unknown date')}")
-            st.markdown(f"Similarity: **{r.get('similarity', 0):.3f}** | "
-                        f"Score: **{score}** | "
-                        f'<span style="background:{color};color:white;padding:2px 8px;'
-                        f'border-radius:8px;">{decision}</span>',
-                        unsafe_allow_html=True)
-            st.write(r.get("headline", "No text available"))
-            st.markdown("---")
+        results = retriever.search(query, k=top_k)
+        
+        for i, res in enumerate(results):
+            # Determine badge
+            is_alert = res.get("decision") == "ALERT"
+            badge_class = "badge-bearish" if is_alert else "badge-neutral"
+            
+            st.markdown(f"""
+<div class="glass-card">
+    <div style="display: flex; justify-content: space-between;">
+        <span style="font-weight: 700;">{i+1}. {res['ticker']}</span>
+        <span class="{badge_class}">{res['decision']}</span>
+    </div>
+    <div style="color: #90a4ae; margin-bottom: 10px;">Similarity: {res['score']:.3f} | Score: {res['composite_score']:.1f}</div>
+    <p style="font-size: 0.9rem; color: #cfd8dc;">{res['text'][:400]}...</p>
+</div>
+            """, unsafe_allow_html=True)

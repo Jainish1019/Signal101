@@ -1,79 +1,89 @@
-import sys, os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-
-import json
+# dashboard/pages/3_evaluation.py
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+import json
+from pathlib import Path
 from config.settings import EVALUATION_DIR
 
-st.set_page_config(page_title="Evaluation", layout="wide")
+# Setup paths
+DASHBOARD_DIR = Path(__file__).parent.parent
+STYLE_CSS = DASHBOARD_DIR / "style.css"
 
-st.title("📊 Evaluation Dashboard")
+if STYLE_CSS.exists():
+    with open(STYLE_CSS) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# Load metrics
-metrics_path = EVALUATION_DIR / "eval_metrics.json"
-if not metrics_path.exists():
-    st.warning("No evaluation metrics. Run the pipeline first.")
-    st.stop()
+st.sidebar.markdown('<h1 class="header-gradient" style="font-size: 1.5rem !important;">SIGNAL-X</h1>', unsafe_allow_html=True)
+st.sidebar.markdown("---")
 
-with open(metrics_path) as f:
-    all_metrics = json.load(f)
+st.markdown('<h1 class="header-gradient" style="font-size: 2.5rem !important;">📊 Evaluation Dashboard</h1>', unsafe_allow_html=True)
 
-adv = all_metrics.get("advanced", {})
+@st.cache_data
+def load_eval():
+    metrics_path = EVALUATION_DIR / "eval_metrics.json"
+    if metrics_path.exists():
+        with open(metrics_path, "r") as f:
+            return json.load(f)
+    return {}
 
-# Top metrics
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Precision", f"{adv.get('precision', 0):.3f}")
-c2.metric("Recall", f"{adv.get('recall', 0):.3f}")
-c3.metric("F1 Score", f"{adv.get('f1', 0):.3f}")
-c4.metric("Utility", f"${adv.get('utility', 0):,.0f}")
+metrics = load_eval()
 
-st.markdown("---")
-col1, col2 = st.columns(2)
+if not metrics:
+    st.warning("No evaluation metrics found. Please run the pipeline first.")
+else:
+    adv = metrics.get("advanced", {})
+    
+    # Hero Metrics
+    st.markdown("""
+<div class="glass-card">
+    <div style="display: flex; justify-content: space-around; text-align: center;">
+        <div>
+            <div class="metric-label">PRECISION</div>
+            <div class="metric-value" style="color: #64ffda;">{pre:.3f}</div>
+        </div>
+        <div>
+            <div class="metric-label">RECALL</div>
+            <div class="metric-value" style="color: #448aff;">{rec:.3f}</div>
+        </div>
+        <div>
+            <div class="metric-label">F1 SCORE</div>
+            <div class="metric-value" style="color: #f48fb1;">{f1:.3f}</div>
+        </div>
+        <div>
+            <div class="metric-label">UTILITY</div>
+            <div class="metric-value" style="color: #ffd54f;">${util:,.0f}</div>
+        </div>
+    </div>
+</div>
+    """.format(
+        pre=adv.get("precision", 0),
+        rec=adv.get("recall", 0),
+        f1=adv.get("f1", 0),
+        util=adv.get("utility", 0)
+    ), unsafe_allow_html=True)
 
-# Confusion matrix
-with col1:
-    st.subheader("Confusion Matrix")
-    cm = pd.DataFrame(
-        [[adv.get("tp", 0), adv.get("fn", 0)],
-         [adv.get("fp", 0), adv.get("tn", 0)]],
-        index=["Actual Event", "Actual Noise"],
-        columns=["Pred ALERT", "Pred ARCHIVE"]
-    )
-    fig = px.imshow(cm, text_auto=True, color_continuous_scale="Blues")
-    st.plotly_chart(fig, use_container_width=True)
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### Confusion Matrix")
+        # Load confusion matrix from file if we had one as image, but we render as table/plotly for now
+        cm = adv.get("confusion_matrix", [[0,0],[0,0]])
+        cm_df = pd.DataFrame(cm, index=["Actual Noise", "Actual Event"], columns=["Pred ARCHIVE", "Pred ALERT"])
+        st.table(cm_df)
 
-# Baseline comparison
-with col2:
-    st.subheader("Baseline Comparison")
-    comp_path = EVALUATION_DIR / "baseline_comparison.csv"
-    if comp_path.exists():
-        comp = pd.read_csv(comp_path)
-        fig = px.bar(comp, x="model", y=["precision", "recall", "f1"],
-                     barmode="group", title="Model Comparison")
-        st.plotly_chart(fig, use_container_width=True)
+    with col2:
+        st.markdown("### Baseline vs Advanced")
+        kw = metrics.get("keyword_baseline", {})
+        baseline_df = pd.DataFrame({
+            "Metric": ["Precision", "Recall", "F1", "Utility"],
+            "Advanced": [adv.get("precision"), adv.get("recall"), adv.get("f1"), adv.get("utility")],
+            "Keyword": [kw.get("precision"), kw.get("recall"), kw.get("f1"), kw.get("utility")]
+        })
+        st.dataframe(baseline_df)
 
-# Calibration curve
-st.markdown("---")
-cal_path = EVALUATION_DIR / "calibration.csv"
-if cal_path.exists():
-    st.subheader("Calibration Curve")
-    cal = pd.read_csv(cal_path)
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=cal["predicted"], y=cal["observed"],
-                             mode="markers+lines", name="Model"))
-    fig.add_trace(go.Scatter(x=[0,1], y=[0,1], mode="lines",
-                             name="Perfect", line=dict(dash="dash")))
-    fig.update_layout(xaxis_title="Predicted Probability",
-                      yaxis_title="Observed Frequency", height=400)
-    st.plotly_chart(fig, use_container_width=True)
-
-# Decay
-decay_path = EVALUATION_DIR / "decay_analysis.csv"
-if decay_path.exists():
-    st.subheader("Signal Decay")
-    decay = pd.read_csv(decay_path)
-    fig = px.bar(decay, x="horizon", y="correlation", title="Score-Return Correlation by Horizon")
-    st.plotly_chart(fig, use_container_width=True)
+    st.markdown("---")
+    st.markdown("### Signal Decay Analysis")
+    decay_path = EVALUATION_DIR / "decay_analysis.csv"
+    if decay_path.exists():
+        decay_df = pd.read_parquet(decay_path) if str(decay_path).endswith(".parquet") else pd.read_csv(decay_path)
+        st.line_chart(decay_df.set_index("horizon")["correlation"])
