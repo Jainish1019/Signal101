@@ -46,7 +46,7 @@ fig = go.Figure()
 fig.add_trace(go.Scatter(
     x=t_prices["date"], y=t_prices["close"],
     mode='lines', name='Price',
-    line=dict(color='#64ffda', width=2),
+    line=dict(color='#00ff88', width=3),
     yaxis='y2'
 ))
 
@@ -57,14 +57,14 @@ archives = t_sigs[t_sigs["decision"] == "ARCHIVE"]
 fig.add_trace(go.Scatter(
     x=alerts["filed_at"], y=alerts["composite_score"],
     mode='markers', name='ALERT',
-    marker=dict(size=12, color='#ff00cc', symbol='circle', line=dict(width=2, color='white')),
+    marker=dict(size=14, color='#00d2ff', symbol='diamond', line=dict(width=2, color='white')),
     yaxis='y1'
 ))
 
 fig.add_trace(go.Scatter(
     x=archives["filed_at"], y=archives["composite_score"],
     mode='markers', name='ARCHIVE',
-    marker=dict(size=8, color='#1a1a2e', symbol='circle', line=dict(width=1, color='#90a4ae')),
+    marker=dict(size=8, color='rgba(255,255,255,0.1)', symbol='circle', line=dict(width=1, color='#8892b0')),
     yaxis='y1'
 ))
 

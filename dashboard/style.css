@@ -1,94 +1,119 @@
 /* dashboard/style.css */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
 
 html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif;
-    color: #e0e0e0;
+    font-family: 'Outfit', sans-serif;
+    color: #f0f4f8;
 }
 
 .stApp {
-    background: radial-gradient(circle at top left, #1a1a2e, #16213e, #0f3460);
+    background: radial-gradient(circle at 0% 0%, #0d1b2a 0%, #000814 100%);
     background-attachment: fixed;
 }
 
-/* Glassmorphism Card */
+/* Glassmorphism Card 2.0 - Neon Edge */
 .glass-card {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 20px;
-    margin-bottom: 20px;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: rgba(16, 20, 30, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 20px;
+    border: 1px solid rgba(0, 255, 136, 0.1);
+    padding: 24px;
+    margin-bottom: 24px;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
 .glass-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 15px 45px rgba(0, 255, 136, 0.15);
+    border: 1px solid rgba(0, 255, 136, 0.4);
 }
 
-/* Sidebar Styling */
+/* Sidebar Styling - Deep Obsidian */
 section[data-testid="stSidebar"] {
-    background-color: rgba(26, 26, 46, 0.8) !important;
-    backdrop-filter: blur(15px);
+    background-color: rgba(0, 8, 20, 0.95) !important;
+    border-right: 1px solid rgba(0, 255, 136, 0.1);
+    backdrop-filter: blur(20px);
 }
 
-/* Custom Header Gradient */
+/* Cyber Header Gradient - Emerald to Cobalt */
 .header-gradient {
-    background: linear-gradient(90deg, #ff00cc, #3333ff);
+    background: linear-gradient(135deg, #00ff88 0%, #00d2ff 50%, #0066ff 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    font-weight: 700;
-    font-size: 3rem !important;
+    background-clip: text;
+    font-weight: 800;
+    font-size: 3.2rem !important;
+    letter-spacing: -1px;
 }
 
-/* Signal Badges */
+/* Dynamic Signal Badges */
 .badge-bullish {
-    background-color: #2e7d32;
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-weight: 600;
+    background: linear-gradient(90deg, #00ff88, #00b09b);
+    color: #000;
+    padding: 6px 16px;
+    border-radius: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
 }
 
 .badge-bearish {
-    background-color: #c62828;
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-weight: 600;
+    background: linear-gradient(90deg, #ff3d00, #d50000);
+    color: #fff;
+    padding: 6px 16px;
+    border-radius: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    box-shadow: 0 0 15px rgba(255, 61, 0, 0.4);
 }
 
 .badge-neutral {
-    background-color: #455a64;
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-weight: 600;
+    background: rgba(255, 255, 255, 0.1);
+    color: #f0f4f8;
+    padding: 6px 16px;
+    border-radius: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.75rem;
 }
 
-/* Tooltip and utility */
+/* Metric Display Enhancement */
 .metric-label {
-    font-size: 0.9rem;
-    color: #b0b0b0;
-    margin-bottom: 5px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #8892b0;
+    margin-bottom: 8px;
 }
 
 .metric-value {
-    font-size: 1.8rem;
-    font-weight: 700;
+    font-size: 2.2rem;
+    font-weight: 800;
     color: #ffffff;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
 }
 
-/* Score Ring Animation Simulation */
-@keyframes ring-fill {
-    from { stroke-dasharray: 0 100; }
+/* Sidebar Text Color Fix */
+[data-testid="stSidebarNav"] span {
+    color: #ccd6f6 !important;
 }
 
-.score-text {
-    font-size: 1.2rem;
+/* Button Styling Override */
+.stButton>button {
+    background: linear-gradient(135deg, #00ff88 0%, #0066ff 100%);
+    color: #000 !important;
+    border: none;
+    border-radius: 8px;
     font-weight: 700;
-    fill: #fff;
+    padding: 10px 25px;
+    transition: all 0.3s ease;
+}
+
+.stButton>button:hover {
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+    transform: scale(1.05);
 }
