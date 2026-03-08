@@ -19,10 +19,15 @@ VECTORDB_DIR = DATA_DIR / "vectordb"
 MODELS_DIR   = DATA_DIR / "models"
 EVALUATION_DIR = DATA_DIR / "evaluation"
 PROOF_PACK_DIR = PROJECT_ROOT / "proof_pack"
+SMOKE_DIR = DATA_DIR / "smoke"
+SMOKE_RAW_DIR = SMOKE_DIR / "raw"
+SMOKE_PROCESSED_DIR = SMOKE_DIR / "processed"
+SMOKE_MODELS_DIR = SMOKE_DIR / "models"
+SMOKE_PROOF_DIR = SMOKE_DIR / "proof_pack"
 
 # Ensure dirs exist
-for d in [RAW_DIR, FILINGS_DIR, PROCESSED_DIR, PRICES_DIR,
-          VECTORDB_DIR, MODELS_DIR, EVALUATION_DIR, PROOF_PACK_DIR]:
+for d in [DATA_DIR, RAW_DIR, FILINGS_DIR, PROCESSED_DIR, PRICES_DIR, VECTORDB_DIR, MODELS_DIR, EVALUATION_DIR, PROOF_PACK_DIR,
+          SMOKE_DIR, SMOKE_RAW_DIR, SMOKE_PROCESSED_DIR, SMOKE_MODELS_DIR, SMOKE_PROOF_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 # ── EDGAR settings ──────────────────────────────────────────────────
